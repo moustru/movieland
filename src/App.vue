@@ -2,8 +2,16 @@
     <div class="main">
         <Header/>
         <div class="category main-block">
-            <Categories/>
-            <Movie :movies="films" @show-bar="$store.commit('showBar', $event)"/>
+            <Categories @click-tab="resetFilters"
+                        @select-genre="filterMovies($event)"/>
+            <div class="movies-block">
+                <Movie v-for="(movie, i) in filters"
+                       :key="i"
+                       :movie="movie"
+                       @show-bar="showBar($event)"
+                />
+            </div>
+            <span class="no-results" v-if="filterList && filterList.length == 0">По выбранному жанру фильмов не найдено</span>
         </div>
         <Bar :show="bar.show" 
              :hide="bar.hide"
@@ -16,7 +24,6 @@
 </template>
 
 <script>
-    import axios from 'axios';
     import { mapState } from 'vuex';
 
     import Header from './components/Header.vue';
@@ -25,6 +32,12 @@
     import Bar from './components/Bar.vue';
 
     export default {
+        data() {
+            return {
+                filterList: null
+            }
+        },
+
         components: {
             Header,
             Categories,
@@ -37,11 +50,40 @@
                 films: state => state.films,
                 bar: state => state.elements.bar,
                 overlay: state => state.elements.overlay
-            })
+            }),
+
+            filters() {
+                return this.filterList ? this.filterList : this.films;
+            }
+        },
+
+        methods: {
+            filterMovies(id) {
+                var fArray = [];
+                this.films.forEach(a => {
+                    if(a.genre_ids.find(b => b == id)) {
+                        fArray.push(a);
+                    } else {
+                        return false;
+                    }
+                })
+
+                this.filterList = fArray;
+                return false;
+            },
+
+            showBar(e) {
+               this.$store.commit('showBar', e);
+               this.$store.commit('getVideo', e.id);
+            },
+
+            resetFilters() {
+                this.filterList = null;
+            }
         },
 
         mounted() {
-            this.$store.commit('setFilms')
+            this.$store.commit('setNewFilms');
         }
     }
 </script>
@@ -71,8 +113,16 @@
     z-index: 2;
 }
 
-.tab-active {
-    color: #000;
+.movies-block {
+    @include Flex;
+    flex-wrap: wrap;
+}
+
+.no-results {
+    display: block;
+    width: 100%;
+    font-size: 18px;
+    text-align: center;
 }
 
 .show { animation: show .3s forwards }
